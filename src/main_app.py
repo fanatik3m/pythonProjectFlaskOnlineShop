@@ -79,6 +79,7 @@ def create_project():
         stmt = insert(Product).values(title=data.get('title'), description=data.get('description'),
                                       category=data.get('category'), creator_id=current_user.get_id())
         db.session.execute(stmt)
+        db.session.commit()
         return {
             'status': 'ok',
             'details': {},
@@ -94,6 +95,7 @@ def create_project():
 
 
 @main_app.route('/products/self/<int:page>')
+@login_required
 def check_self_products(page):
     try:
         offset = (page - 1) * 10
@@ -103,7 +105,7 @@ def check_self_products(page):
         return {
             'status': 'ok',
             'details': {},
-            'data': [row.to_json() for row in result.all()]
+            'data': [row[0].to_json() for row in result.all()]
         }
     except Exception as ex:
         print(ex)
@@ -114,8 +116,9 @@ def check_self_products(page):
         }
 
 
-@main_app.route('/products/self/<title>')
-def check_self_products(product_title):
+@main_app.route('/products/self/<product_title>')
+@login_required
+def check_self_product_by_title(product_title):
     try:
         query = select(Product).where(Product.creator_id == current_user.get_id()).where(Product.title == product_title).limit(1)
         result = db.session.execute(query)
@@ -134,14 +137,15 @@ def check_self_products(product_title):
 
 
 @main_app.route('/products/category/<category_name>')
-def check_self_products(category_name):
+@login_required
+def check_products_by_category(category_name):
     try:
-        query = select(Product).where(category_name in Product.category)
+        query = select(Product).where(Product.category == category_name)
         result = db.session.execute(query)
         return {
             'status': 'ok',
             'details': {},
-            'data': [row.to_json() for row in result.all()]
+            'data': [row[0].to_json() for row in result.all()]
         }
     except Exception as ex:
         print(ex)
@@ -152,11 +156,13 @@ def check_self_products(category_name):
         }
 
 
-@main_app.route('/products/<product_title>', methods=['DELETE'])
+@main_app.route('/products/self/<product_title>', methods=['DELETE'])
+@login_required
 def delete_product(product_title):
     try:
         stmt = delete(Product).where(Product.title == product_title).where(Product.creator_id == current_user.get_id())
         db.session.execute(stmt)
+        db.session.commit()
         return {
             'status': 'ok',
             'details': {},

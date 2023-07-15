@@ -35,3 +35,12 @@ class Product(db.Model):
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
     creator_id = db.Column(db.Integer, db.ForeignKey(User.id))
 
+    def to_json(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'category': self.category,
+            'created_at': self.created_at,
+            'creator_id': self.creator_id
+        }
