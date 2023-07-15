@@ -133,6 +133,25 @@ def check_self_products(product_title):
         }
 
 
+@main_app.route('/products/category/<category_name>')
+def check_self_products(category_name):
+    try:
+        query = select(Product).where(category_name in Product.category)
+        result = db.session.execute(query)
+        return {
+            'status': 'ok',
+            'details': {},
+            'data': [row.to_json() for row in result.all()]
+        }
+    except Exception as ex:
+        print(ex)
+        return {
+            'status': 'error',
+            'details': {},
+            'data': {}
+        }
+
+
 @main_app.route('/products/<product_title>', methods=['DELETE'])
 def delete_product(product_title):
     try:
@@ -150,3 +169,5 @@ def delete_product(product_title):
             'details': {},
             'data': {}
         }
+
+
