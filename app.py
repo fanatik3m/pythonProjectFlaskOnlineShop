@@ -3,6 +3,7 @@ from flask import Flask
 from src.config import DB_URL, SECRET_KEY
 from src.extensions import db, migrate
 from src.main_app import main_app, login_manager
+from src.admin import admin
 
 
 def create_app():
@@ -13,6 +14,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    admin.init_app(app)
     app.register_blueprint(main_app)
     return app
 

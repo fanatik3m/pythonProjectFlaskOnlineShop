@@ -1,11 +1,11 @@
-from flask import Blueprint, request, url_for, redirect
+from flask import Blueprint, request, url_for, redirect, render_template, session, abort
 from flask_login import LoginManager, login_user, current_user, login_required
-from sqlalchemy import insert, select, delete
+from sqlalchemy import insert, select, delete, update
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from src.extensions import db
-from src.models import User, Product
+from src.models import User, Product, Order
 from src.user_login import UserLogin
 from src.utils import redirect_authorized_users
 
@@ -73,7 +73,7 @@ def profile():
 
 @main_app.route('/products', methods=['POST'])
 @login_required
-def create_project():
+def create_product():
     try:
         data = request.get_json()
         stmt = insert(Product).values(title=data.get('title'), description=data.get('description'),
@@ -120,7 +120,8 @@ def check_self_products(page):
 @login_required
 def check_self_product_by_title(product_title):
     try:
-        query = select(Product).where(Product.creator_id == current_user.get_id()).where(Product.title == product_title).limit(1)
+        query = select(Product).where(Product.creator_id == current_user.get_id()).where(
+            Product.title == product_title).limit(1)
         result = db.session.execute(query)
         return {
             'status': 'ok',
@@ -177,3 +178,107 @@ def delete_product(product_title):
         }
 
 
+@main_app.route('/orders', methods=['POST'])
+@login_required
+def create_order():
+    try:
+        data = request.get_json()
+
+        query = select(Product).where(Product.id == data.get('product_id')).limit(1)
+        product = db.session.execute(query).scalar_one().to_json()
+
+        stmt = insert(Order).values(product_id=data.get('product_id'), customer_id=current_user.get_id(),
+                                    seller_id=product.creator_id)
+        db.session.execute(stmt)
+        db.session.commit()
+        return {
+            'status': 'ok',
+            'details': {},
+            'data': {}
+        }
+    except Exception as ex:
+        print(ex)
+        return {
+            'status': 'error',
+            'details': {},
+            'data': {}
+        }
+
+
+@main_app.route('/orders/self/<int:page>')
+@login_required
+def check_self_orders(page):
+    try:
+        offset = (page - 1) * 10
+
+        query = select(Order).where(Order.customer_id == current_user.get_id()).offset(offset).limit(10)
+        result = db.session.execute(query)
+        return {
+            'status': 'ok',
+            'details': {},
+            'data': [row[0].to_json() for row in result.all()]
+        }
+    except Exception as ex:
+        print(ex)
+        return {
+            'status': 'error',
+            'details': {},
+            'data': {}
+        }
+
+
+@main_app.route('/orders/<int:page>')
+@login_required
+def check_orders_of_your_products(page):
+    try:
+        offset = (page - 1) * 10
+
+        query = select(Order).where(Order.seller_id == current_user.get_id()).offset(offset).limit(10)
+        result = db.session.execute(query)
+        return {
+            'status': 'ok',
+            'details': {},
+            'data': [row[0].to_json() for row in result.all()]
+        }
+    except Exception as ex:
+        print(ex)
+        return {
+            'status': 'error',
+            'details': {},
+            'data': {}
+        }
+
+
+@main_app.route('/orders/<int:order_id>', method=['PUT'])
+@login_required
+def update_order_status(order_id):
+    try:
+        stmt = update(Order).where(Order.id == order_id).where(Order.seller_id == current_user.get_id()).values(
+            is_completed=True)
+        db.session.execute(stmt)
+        db.session.commit()
+        return {
+            'status': 'ok',
+            'details': {},
+            'data': {}
+        }
+    except Exception as ex:
+        print(ex)
+        return {
+            'status': 'error',
+            'details': {},
+            'data': {}
+        }
+
+
+@main_app.route('/admin_login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        if request.form.get('username') == 'admin_admin_app' and request.form.get(
+                'password') == 'usa9dyasd7827838r238reiijklsfnjjdskhfskdjfhsdkjfhsdklaqwpo':
+            session['admin_logged_in'] = True
+            return redirect('/admin')
+        else:
+            abort(401)
+
+    return render_template('login.html')

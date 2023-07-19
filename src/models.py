@@ -44,3 +44,24 @@ class Product(db.Model):
             'created_at': self.created_at,
             'creator_id': self.creator_id
         }
+
+
+class Order(db.Model):
+    __tablename__ = 'order'
+
+    id = db.Column(db.Integer, primary_key=True)
+    is_completed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+    product_id = db.Column(db.Integer, db.ForeignKey(Product.id))
+    seller_id = db.Column(db.Integer, db.ForeignKey(User.id))
+    customer_id = db.Column(db.Integer, db.ForeignKey(User.id))
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'is_completed': self.is_completed,
+            'created_at': self.created_at,
+            'product_id': self.product_id,
+            'seller_id': self.seller_id,
+            'customer_id': self.customer_id
+        }
