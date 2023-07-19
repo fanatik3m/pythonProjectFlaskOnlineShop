@@ -1,10 +1,11 @@
-from flask import Blueprint, request, url_for, redirect, render_template, session, abort
+from flask import Blueprint, request, url_for, redirect, render_template, session, abort, flash
 from flask_login import LoginManager, login_user, current_user, login_required
 from sqlalchemy import insert, select, delete, update
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from src.extensions import db
+from src.forms import LoginUserForm, RegisterUserForm, CreateProductForm
 from src.models import User, Product, Order
 from src.user_login import UserLogin
 from src.utils import redirect_authorized_users
@@ -22,76 +23,62 @@ def load_user(user_id):
 @main_app.route('/')
 @main_app.route('/index')
 def index():
-    return 'hi from main_app blueprint'
+    return render_template('index.html', title='Main page')
 
 
-@main_app.route('/register', methods=['POST'])
+@main_app.route('/register', methods=['POST', 'GET'])
 def register():
-    data = request.get_json()
-    try:
-        username = data.get('username')
-        email = data.get('email')
-        password = data.get('password')
-        hashed_password = generate_password_hash(password)
-
-        stmt = insert(User).values(username=username, email=email, password=hashed_password)
+    form = RegisterUserForm()
+    if form.validate_on_submit():
+        hashed_password = generate_password_hash(form.password.data)
+        stmt = insert(User).values(username=form.username.data, email=form.email.data, password=hashed_password)
         db.session.execute(stmt)
         db.session.commit()
-        return {'status': 'ok', 'details': {}, 'data': {}}
-    except Exception as ex:
-        print(ex)
-        return {'status': 'error', 'details': {'msg': 'got non-valid data'}, 'data': {}}
+
+    return render_template('register.html', title='Register', form=form)
 
 
-@main_app.route('/login', methods=['POST'])
+@main_app.route('/login', methods=['POST', 'GET'])
 @redirect_authorized_users
 def login():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    remember: bool = True if data.get('remember') else False
+    form = LoginUserForm()
+    if form.validate_on_submit():
+        try:
+            query = select(User).where(User.email == form.email.data).limit(1)
+            user = db.session.execute(query).scalar_one().to_json()
+            if user and check_password_hash(user.get('password'), form.password.data):
+                user_login = UserLogin().create(user)
+                login_user(user_login, remember=form.remember.data)
+                return redirect(url_for('.profile'))
+        except Exception as ex:
+            flash(str(ex))
+        flash('Got non-valid data')
 
-    query = select(User).where(User.email == email).limit(1)
-    user = db.session.execute(query).scalar_one().to_json()
-    if user and check_password_hash(user.get('password'), password):
-        user_login = UserLogin().create(user)
-        login_user(user_login, remember=remember)
-        return redirect(url_for('.profile'))
-    else:
-        return {'status': 'error', 'details': {'msg': 'got non-valid data'}, 'data': {}}
+    return render_template('login_user.html', title='Log in', form=form)
 
 
 @main_app.route('/profile')
 @login_required
 def profile():
-    return {
-        'id': current_user.get_id(),
-        'username': current_user.get_username(),
-        'email': current_user.get_email()
-    }
+    return render_template('profile.html', title='Profile', id=current_user.get_id(),
+                           username=current_user.get_username(), email=current_user.get_email())
 
 
-@main_app.route('/products', methods=['POST'])
+@main_app.route('/products', methods=['POST', 'GET'])
 @login_required
 def create_product():
-    try:
-        data = request.get_json()
-        stmt = insert(Product).values(title=data.get('title'), description=data.get('description'),
-                                      category=data.get('category'), creator_id=current_user.get_id())
-        db.session.execute(stmt)
-        db.session.commit()
-        return {
-            'status': 'ok',
-            'details': {},
-            'data': {}
-        }
-    except Exception as ex:
-        print(ex)
-        return {
-            'status': 'error',
-            'details': {},
-            'data': {}
-        }
+    form = CreateProductForm()
+    if form.validate_on_submit():
+        try:
+            stmt = insert(Product).values(title=form.title.data, description=form.description.data,
+                                          category=form.category.data, creator_id=current_user.get_id())
+            db.session.execute(stmt)
+            db.session.commit()
+            flash('Product created')
+        except Exception as ex:
+            flash(str(ex))
+
+    return render_template('create_product.html', title='Create product', form=form)
 
 
 @main_app.route('/products/self/<int:page>')
@@ -102,18 +89,11 @@ def check_self_products(page):
 
         query = select(Product).where(Product.creator_id == current_user.get_id()).offset(offset).limit(10)
         result = db.session.execute(query)
-        return {
-            'status': 'ok',
-            'details': {},
-            'data': [row[0].to_json() for row in result.all()]
-        }
+
+        return render_template('check_self_products.html', title='Check products',
+                               data=[row[0].to_json() for row in result.all()])
     except Exception as ex:
-        print(ex)
-        return {
-            'status': 'error',
-            'details': {},
-            'data': {}
-        }
+        flash(str(ex))
 
 
 @main_app.route('/products/self/<product_title>')
@@ -123,18 +103,9 @@ def check_self_product_by_title(product_title):
         query = select(Product).where(Product.creator_id == current_user.get_id()).where(
             Product.title == product_title).limit(1)
         result = db.session.execute(query)
-        return {
-            'status': 'ok',
-            'details': {},
-            'data': result.scalar_one().to_json()
-        }
+        return render_template('check_titled_products.html', data=result.scalar_one().to_json())
     except Exception as ex:
-        print(ex)
-        return {
-            'status': 'error',
-            'details': {},
-            'data': {}
-        }
+        flash(str(ex))
 
 
 @main_app.route('/products/category/<category_name>')
@@ -143,18 +114,10 @@ def check_products_by_category(category_name):
     try:
         query = select(Product).where(Product.category == category_name)
         result = db.session.execute(query)
-        return {
-            'status': 'ok',
-            'details': {},
-            'data': [row[0].to_json() for row in result.all()]
-        }
+
+        return render_template('check_categoried_products.html', data=[row[0].to_json() for row in result.all()])
     except Exception as ex:
-        print(ex)
-        return {
-            'status': 'error',
-            'details': {},
-            'data': {}
-        }
+        flash(str(ex))
 
 
 @main_app.route('/products/self/<product_title>', methods=['DELETE'])
@@ -213,18 +176,9 @@ def check_self_orders(page):
 
         query = select(Order).where(Order.customer_id == current_user.get_id()).offset(offset).limit(10)
         result = db.session.execute(query)
-        return {
-            'status': 'ok',
-            'details': {},
-            'data': [row[0].to_json() for row in result.all()]
-        }
+        return render_template('check_self_orders.html', data=[row[0].to_json() for row in result.all()])
     except Exception as ex:
-        print(ex)
-        return {
-            'status': 'error',
-            'details': {},
-            'data': {}
-        }
+        flash(str(ex))
 
 
 @main_app.route('/orders/<int:page>')
@@ -235,21 +189,12 @@ def check_orders_of_your_products(page):
 
         query = select(Order).where(Order.seller_id == current_user.get_id()).offset(offset).limit(10)
         result = db.session.execute(query)
-        return {
-            'status': 'ok',
-            'details': {},
-            'data': [row[0].to_json() for row in result.all()]
-        }
+        return render_template('check_self_own_orders.html', data=[row[0].to_json() for row in result.all()])
     except Exception as ex:
-        print(ex)
-        return {
-            'status': 'error',
-            'details': {},
-            'data': {}
-        }
+        flash(str(ex))
 
 
-@main_app.route('/orders/<int:order_id>', method=['PUT'])
+@main_app.route('/orders/<int:order_id>', methods=['PUT'])
 @login_required
 def update_order_status(order_id):
     try:
@@ -271,8 +216,8 @@ def update_order_status(order_id):
         }
 
 
-@main_app.route('/admin_login', methods=['GET', 'POST'])
-def admin_login():
+@main_app.route('/admin_log', methods=['GET', 'POST'])
+def admin_log():
     if request.method == 'POST':
         if request.form.get('username') == 'admin_admin_app' and request.form.get(
                 'password') == 'usa9dyasd7827838r238reiijklsfnjjdskhfskdjfhsdkjfhsdklaqwpo':

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% for msg in get_flashed_messages() %}
+<div>{{ msg }}</div>
+{% endfor %}
+
+{% for row in data %}
+<div><p>{{ row.id }}</p></div>
+<div><p>{{ row.title }}</p></div>
+<div><p>{{ row.description }}</p></div>
+<div><p>{{ row.category }}</p></div>
+{% endfor %}
+
+{% endblock %}

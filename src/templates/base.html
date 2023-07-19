@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% if title %}
+        <title>{{ title }}</title>
+    {% else %}
+        <title>Online shop</title>
+    {% endif %}
+</head>
+<body>
+    <nav class="text-2xl font-bold bg-indigo-300 mb-10 flex justify-between">
+        <ul class="p-2">
+            <li><a href="/index">Main</a></li>
+        </ul>
+        <ul class="flex justify-center p-2">
+            <li class="px-2"><a href="/register">Register</a></li>
+            <li class="px-2"><a href="/login">Log in</a></li>
+        </ul>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+</body>
+</html>

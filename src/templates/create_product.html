@@ -7,8 +7,9 @@
 
 <form action="" method="post" class="flex-col items-center">
     {{ form.hidden_tag() }}
-    <div>{{ form.email.label() }} {{ form.email() }}</div>
-    <div>{{ form.password.label() }} {{ form.password() }}</div>
+    <div>{{ form.title.label() }} {{ form.title() }}</div>
+    <div>{{ form.description.label() }} {{ form.description() }}</div>
+    <div>{{ form.category.label() }} {{ form.category() }}</div>
     <div>{{ form.submit() }}</div>
     </form>
 

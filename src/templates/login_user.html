@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% for msg in get_flashed_messages() %}
+<div>{{ msg }}</div>
+{% endfor %}
+
+<form action="" method="post" class="flex-col items-center">
+    {{ form.hidden_tag() }}
+    <div>{{ form.email.label() }} {{ form.email() }}</div>
+    <div>{{ form.password.label() }} {{ form.password() }}</div>
+    <div>{{ form.remember.label() }} {{ form.remember() }}</div>
+    <div>{{ form.submit() }}</div>
+    <hr align=left width="300px">
+    <a href="{{url_for('.register')}}">Регистрация</a>
+    </form>
+
+{% endblock %}
