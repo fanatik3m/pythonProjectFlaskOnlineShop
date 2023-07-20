@@ -76,7 +76,8 @@ def create_product():
             db.session.commit()
             flash('Product created')
         except Exception as ex:
-            flash(str(ex))
+            print(str(ex))
+            return redirect(url_for('.index'))
 
     return render_template('create_product.html', title='Create product', form=form)
 
@@ -93,7 +94,8 @@ def check_self_products(page):
         return render_template('check_self_products.html', title='Check products',
                                data=[row[0].to_json() for row in result.all()])
     except Exception as ex:
-        flash(str(ex))
+        print(str(ex))
+        return redirect(url_for('.index'))
 
 
 @main_app.route('/products/self/<product_title>')
@@ -105,7 +107,8 @@ def check_self_product_by_title(product_title):
         result = db.session.execute(query)
         return render_template('check_titled_products.html', data=result.scalar_one().to_json())
     except Exception as ex:
-        flash(str(ex))
+        print(str(ex))
+        return redirect(url_for('.index'))
 
 
 @main_app.route('/products/category/<category_name>')
@@ -117,7 +120,8 @@ def check_products_by_category(category_name):
 
         return render_template('check_categoried_products.html', data=[row[0].to_json() for row in result.all()])
     except Exception as ex:
-        flash(str(ex))
+        print(str(ex))
+        return redirect(url_for('.index'))
 
 
 @main_app.route('/products/self/<product_title>', methods=['DELETE'])
@@ -141,7 +145,7 @@ def delete_product(product_title):
         }
 
 
-@main_app.route('/orders/<int:product_id>', methods=['POST'])
+@main_app.route('/orders/<int:product_id>', methods=['GET'])
 @login_required
 def create_order(product_id):
     try:
@@ -149,16 +153,13 @@ def create_order(product_id):
         product = db.session.execute(query).scalar_one().to_json()
 
         stmt = insert(Order).values(product_id=product_id, customer_id=current_user.get_id(),
-                                    seller_id=product.creator_id)
+                                    seller_id=product.get('creator_id'))
         db.session.execute(stmt)
         db.session.commit()
-        return {
-            'status': 'ok',
-            'details': {},
-            'data': {}
-        }
+        return render_template('order_created.html', title='Order created')
     except Exception as ex:
-        flash(str(ex))
+        print(str(ex))
+        return redirect(url_for('.index'))
 
 
 @main_app.route('/orders/self/<int:page>')
@@ -171,10 +172,11 @@ def check_self_orders(page):
         result = db.session.execute(query)
         return render_template('check_self_orders.html', data=[row[0].to_json() for row in result.all()])
     except Exception as ex:
-        flash(str(ex))
+        print(str(ex))
+        return redirect(url_for('.index'))
 
 
-@main_app.route('/orders/<int:page>')
+@main_app.route('/orders/self_own/<int:page>')
 @login_required
 def check_orders_of_your_products(page):
     try:
@@ -184,7 +186,8 @@ def check_orders_of_your_products(page):
         result = db.session.execute(query)
         return render_template('check_self_own_orders.html', data=[row[0].to_json() for row in result.all()])
     except Exception as ex:
-        flash(str(ex))
+        print(str(ex))
+        return redirect(url_for('.index'))
 
 
 @main_app.route('/orders/<int:order_id>', methods=['PUT'])
