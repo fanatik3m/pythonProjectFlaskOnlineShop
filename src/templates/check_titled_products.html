@@ -5,9 +5,11 @@
 <div>{{ msg }}</div>
 {% endfor %}
 
-<div><p>{{ data.id }}</p></div>
-<div><p>{{ data.title }}</p></div>
-<div><p>{{ data.description }}</p></div>
-<div><p>{{ data.category }}</p></div>
+<div class="p-4 border">
+    <p>{{ data.id }}</p>
+    <p>{{ data.title }}</p>
+    <p>{{ data.description }}</p>
+    <p>{{ data.category }}</p>
+</div>
 
 {% endblock %}

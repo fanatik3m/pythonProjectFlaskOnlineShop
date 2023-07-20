@@ -6,10 +6,12 @@
 {% endfor %}
 
 {% for row in data %}
-<div><p>{{ row.id }}</p></div>
-<div><p>{{ row.title }}</p></div>
-<div><p>{{ row.description }}</p></div>
-<div><p>{{ row.category }}</p></div>
+<div>
+    <p>{{ row.id }}</p></div>
+<p>{{ row.is_completed }}</p>
+<p>{{ row.created_at }}</p>
+<p>{{ row.product_id }}</p>
+</div>
 {% endfor %}
 
 {% endblock %}

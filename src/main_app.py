@@ -141,16 +141,14 @@ def delete_product(product_title):
         }
 
 
-@main_app.route('/orders', methods=['POST'])
+@main_app.route('/orders/<int:product_id>', methods=['POST'])
 @login_required
-def create_order():
+def create_order(product_id):
     try:
-        data = request.get_json()
-
-        query = select(Product).where(Product.id == data.get('product_id')).limit(1)
+        query = select(Product).where(Product.id == product_id).limit(1)
         product = db.session.execute(query).scalar_one().to_json()
 
-        stmt = insert(Order).values(product_id=data.get('product_id'), customer_id=current_user.get_id(),
+        stmt = insert(Order).values(product_id=product_id, customer_id=current_user.get_id(),
                                     seller_id=product.creator_id)
         db.session.execute(stmt)
         db.session.commit()
@@ -160,12 +158,7 @@ def create_order():
             'data': {}
         }
     except Exception as ex:
-        print(ex)
-        return {
-            'status': 'error',
-            'details': {},
-            'data': {}
-        }
+        flash(str(ex))
 
 
 @main_app.route('/orders/self/<int:page>')
